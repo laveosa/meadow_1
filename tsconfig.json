@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": false,
+    "target": "esnext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["esnext", "es2015", "dom", "dom.iterable"],
+    "types": ["node"],
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "#src/*": ["./src/*"],
+      "#db/*": ["./db/*"]
+    },
+    // Style Options
+    "strictNullChecks": false,
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["app.ts", "src/**/*", "db/**/*"]
+}

@@ -1,0 +1,36 @@
+{
+  "name": "meadow_1",
+  "version": "1.0.0",
+  "description": "more code",
+  "license": "ISC",
+  "author": "Nik",
+  "type": "module",
+  "main": "app.ts",
+  "imports": {
+    "#src/*": {
+      "types": "./src/*",
+      "default": "./dist/src/*"
+    },
+    "#db/*": {
+      "types": "./db/*",
+      "default": "./dist/db/*"
+    }
+  },
+  "scripts": {
+    "ts:watch": "tsc --watch --project tsconfig.json",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.8.3",
+    "socketio": "^1.0.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}
