@@ -1,14 +1,19 @@
 import { createServer } from "node:http";
+import express, { Router } from "express";
 import { Server } from "socket.io";
-import express from "express";
 import cors from "cors";
 
-import { APP_CONFIG, SERVER_CONF } from "#src/config/app-config.js";
+import {
+  APP_CONFIG,
+  globalErrorHandler,
+  SERVER_CONF,
+} from "#src/config/app-config.js";
 import masterRouter from "#src/routes/master-router.js";
 
 const app = express();
 app.use(cors(SERVER_CONF.expressCors));
-app.use("/api", masterRouter);
+app.use("/api", masterRouter as Router);
+app.use(globalErrorHandler);
 const server = createServer(app);
 const io = new Server(server, SERVER_CONF.socketIo);
 

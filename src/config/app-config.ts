@@ -29,3 +29,12 @@ export const SERVER_CONF = {
     },
   },
 } as const;
+
+export function globalErrorHandler(err: any, req: any, res: any) {
+  console.error("GLOBAL SERVER ERROR LAYER:", err.stack || err);
+
+  res.status(err.status || 500).json({
+    error: err.name || "InternalServerError",
+    message: err.message || "An unexpected error occurred on the server.",
+  });
+}

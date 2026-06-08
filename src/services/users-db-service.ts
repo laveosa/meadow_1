@@ -33,6 +33,26 @@ export default class UsersDbService {
     return user;
   }
 
+  static async updateUser(user: UserModel) {
+    if (!user || !user.id) return null;
+
+    await this.initCache();
+    let updated: UserModel;
+    this.cachedData = this.cachedData.map((item) => {
+      if (item.id === user.id) {
+        updated = item;
+        return user;
+      }
+
+      return item;
+    });
+
+    if (!updated) return null;
+
+    await FsService.writeFile(PATH, this.cachedData);
+    return updated;
+  }
+
   static async removeUser(id: number) {
     if (!id) return null;
 
@@ -44,26 +64,6 @@ export default class UsersDbService {
     this.cachedData = this.cachedData.filter((item) => item.id !== id);
     await FsService.writeFile(PATH, this.cachedData);
     return removed;
-  }
-
-  static async updateUser(user: UserModel) {
-    if (!user || !user.id) return null;
-
-    await this.initCache();
-    let updated;
-    this.cachedData = this.cachedData.map((item) => {
-      if (item.id === user.id) {
-        updated = true;
-        return user;
-      }
-
-      return item;
-    });
-
-    if (!updated) return null;
-
-    await FsService.writeFile(PATH, this.cachedData);
-    return user;
   }
 
   // ====================================================== PRIVATE

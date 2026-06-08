@@ -30,6 +30,26 @@ export default class MessagesDbService {
     return message;
   }
 
+  static async updateMessage(message: MessageModel) {
+    if (!message || !message.id) return null;
+
+    await this.initCache();
+    let updated: MessageModel;
+    this.cachedData = this.cachedData.map((item) => {
+      if (item.id === message.id) {
+        updated = item;
+        return message;
+      }
+
+      return item;
+    });
+
+    if (!updated) return null;
+
+    await FsService.writeFile(PATH, this.cachedData);
+    return updated;
+  }
+
   static async removeMessage(id: number) {
     if (!id) return null;
 
@@ -41,26 +61,6 @@ export default class MessagesDbService {
     this.cachedData = this.cachedData.filter((item) => item.id !== id);
     await FsService.writeFile(PATH, this.cachedData);
     return removed;
-  }
-
-  static async updateMessage(message: MessageModel) {
-    if (!message || !message.id) return null;
-
-    await this.initCache();
-    let updated;
-    this.cachedData = this.cachedData.map((item) => {
-      if (item.id === message.id) {
-        updated = true;
-        return message;
-      }
-
-      return item;
-    });
-
-    if (!updated) return null;
-
-    await FsService.writeFile(PATH, this.cachedData);
-    return message;
   }
 
   // ====================================================== PRIVATE

@@ -30,6 +30,26 @@ export default class RoomsDbService {
     return room;
   }
 
+  static async updateRoom(room: RoomModel) {
+    if (!room || !room.id) return null;
+
+    await this.initCache();
+    let updated: RoomModel;
+    this.cachedData = this.cachedData.map((item) => {
+      if (item.id === room.id) {
+        updated = item;
+        return room;
+      }
+
+      return item;
+    });
+
+    if (!updated) return null;
+
+    await FsService.writeFile(PATH, this.cachedData);
+    return updated;
+  }
+
   static async removeRoom(id: number) {
     if (!id) return null;
 
@@ -41,26 +61,6 @@ export default class RoomsDbService {
     this.cachedData = this.cachedData.filter((item) => item.id !== id);
     await FsService.writeFile(PATH, this.cachedData);
     return removed;
-  }
-
-  static async updateRoom(room: RoomModel) {
-    if (!room || !room.id) return null;
-
-    await this.initCache();
-    let updated;
-    this.cachedData = this.cachedData.map((item) => {
-      if (item.id === room.id) {
-        updated = true;
-        return room;
-      }
-
-      return item;
-    });
-
-    if (!updated) return null;
-
-    await FsService.writeFile(PATH, this.cachedData);
-    return room;
   }
 
   // ====================================================== PRIVATE
