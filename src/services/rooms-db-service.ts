@@ -1,43 +1,40 @@
 import { APP_CONFIG } from "#src/config/app-config.js";
 import FsService from "#src/utils/services/fs-service.js";
-import type { UserModel } from "#src/const/models/UserModel.js";
 import type { RoomModel } from "#src/const/models/RoomModel.js";
 
-const PATH = APP_CONFIG.dbConf.usersPath;
+const PATH = APP_CONFIG.dbConf.roomsPath;
 
-export default class UsersDbService {
-  private static cachedData: UserModel[] = [];
+export default class RoomsDbService {
+  private static cachedData: RoomModel[] = [];
   private static isInitialized = false;
 
-  static async getAllUsers(room?: RoomModel) {
+  static async getAllRooms() {
     await this.initCache();
-    return room
-      ? this.cachedData.filter((item) => item.roomId === room.id)
-      : [...this.cachedData];
+    return [...this.cachedData];
   }
 
-  static async getUserById(id: number) {
+  static async getRoomById(id: number) {
     if (!id) return null;
 
     await this.initCache();
     return this.cachedData?.find((item) => item.id === id);
   }
 
-  static async addUser(user: UserModel) {
-    if (!user || !user.id) return null;
+  static async addRoom(room: RoomModel) {
+    if (!room || !room.id) return null;
 
     await this.initCache();
-    this.cachedData = this.cachedData.filter((item) => item.id !== user.id);
-    this.cachedData.push(user);
+    this.cachedData = this.cachedData.filter((item) => item.id !== room.id);
+    this.cachedData.push(room);
     await FsService.writeFile(PATH, this.cachedData);
-    return user;
+    return room;
   }
 
-  static async removeUser(id: number) {
+  static async removeRoom(id: number) {
     if (!id) return null;
 
     await this.initCache();
-    const removed: UserModel = this.cachedData.find((item) => item.id === id);
+    const removed = this.cachedData.find((item) => item.id === id);
 
     if (!removed) return null;
 
@@ -46,15 +43,15 @@ export default class UsersDbService {
     return removed;
   }
 
-  static async updateUser(user: UserModel) {
-    if (!user || !user.id) return null;
+  static async updateRoom(room: RoomModel) {
+    if (!room || !room.id) return null;
 
     await this.initCache();
     let updated;
     this.cachedData = this.cachedData.map((item) => {
-      if (item.id === user.id) {
+      if (item.id === room.id) {
         updated = true;
-        return user;
+        return room;
       }
 
       return item;
@@ -63,7 +60,7 @@ export default class UsersDbService {
     if (!updated) return null;
 
     await FsService.writeFile(PATH, this.cachedData);
-    return user;
+    return room;
   }
 
   // ====================================================== PRIVATE
@@ -74,7 +71,7 @@ export default class UsersDbService {
     this.isInitialized = true;
   }
 
-  private static async loadFromFile(): Promise<UserModel[]> {
+  private static async loadFromFile(): Promise<RoomModel[]> {
     try {
       const rawData = (await FsService.readFile(PATH)) as string;
       return rawData.trim() ? JSON.parse(rawData) : [];
