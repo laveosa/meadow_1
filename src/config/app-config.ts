@@ -25,7 +25,7 @@ export const SERVER_CONF = {
   },
 } as const;
 
-export function globalErrorHandler(req: any, res: any, err: any) {
+export function globalErrorHandler(err: any, req: any, res: any, next: any) {
   console.error("GLOBAL SERVER ERROR LAYER:", err.stack || err);
 
   res.status(err.status || 500).json({

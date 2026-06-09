@@ -19,10 +19,16 @@ usersRouter.get("/all", async (req, res, next) => {
   }
 });
 
-usersRouter.get("/:id", async (req, res, next) => {
-  console.log("[USER_ROUTER]");
+usersRouter.get("{/:id}", async (req, res, next) => {
+  const rawId = req.params.id || req.query.id;
 
-  const userId: number = parseInt(req.params.id, 10);
+  if (!rawId) {
+    return res
+      .status(400)
+      .json(onError("No user ID provided via path or query string."));
+  }
+
+  const userId = parseInt(rawId as string, 10);
 
   if (isNaN(userId))
     return res.status(400).json(onError(`Invalid user ID:${userId}`));
