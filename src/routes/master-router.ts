@@ -6,8 +6,8 @@ import messagesRouter from "#src/routes/messages-router.js";
 
 const masterRouter = Router();
 
-masterRouter.use("/users", usersRouter as Router);
-masterRouter.use("/rooms", roomsRoutes as Router);
-masterRouter.use("/messages", messagesRouter as Router);
+masterRouter.use("/user", usersRouter as Router);
+masterRouter.use("/room", roomsRoutes as Router);
+masterRouter.use("/message", messagesRouter as Router);
 
 export default masterRouter;

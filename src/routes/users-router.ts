@@ -20,6 +20,8 @@ usersRouter.get("/all", async (req, res, next) => {
 });
 
 usersRouter.get("/:id", async (req, res, next) => {
+  console.log("[USER_ROUTER]");
+
   const userId: number = parseInt(req.params.id, 10);
 
   if (isNaN(userId))

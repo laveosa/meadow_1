@@ -1,9 +1,4 @@
-import { fileURLToPath } from "node:url";
-
-const resolvePath = (relatedPath: string) => {
-  if (!relatedPath || relatedPath.length === 0) return null;
-  return fileURLToPath(new URL(relatedPath, import.meta.url));
-};
+import { pathResolve } from "#src/utils/helpers/quick-helper.js";
 
 export const APP_CONFIG = {
   serverConf: {
@@ -11,9 +6,9 @@ export const APP_CONFIG = {
     origin: process.env.ORIGIN || "http://localhost:8080",
   },
   dbConf: {
-    roomsPath: resolvePath(process.env.DB_ROOMS_PATH || "./db/rooms.json"),
-    usersPath: resolvePath(process.env.DB_USERS_PATH || "./db/users.json"),
-    messagesPath: resolvePath(
+    roomsPath: pathResolve(process.env.DB_ROOMS_PATH || "./db/rooms.json"),
+    usersPath: pathResolve(process.env.DB_USERS_PATH || "./db/users.json"),
+    messagesPath: pathResolve(
       process.env.DB_MESSAGES_PATH || "./db/messages.json",
     ),
   },
@@ -30,7 +25,7 @@ export const SERVER_CONF = {
   },
 } as const;
 
-export function globalErrorHandler(err: any, req: any, res: any) {
+export function globalErrorHandler(req: any, res: any, err: any) {
   console.error("GLOBAL SERVER ERROR LAYER:", err.stack || err);
 
   res.status(err.status || 500).json({
