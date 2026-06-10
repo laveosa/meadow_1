@@ -43,7 +43,10 @@ io.on("connect", (socket) => {
     }
 
     await UsersDbService.addUser(user);
-    (socket as any).userData = { ...user, roomName: room.name };
+    socket.data = {
+      user,
+      room,
+    };
     socket.join(room.name);
     socket.broadcast.to(room.name).emit(usersEv.updated, user);
     socket.emit(usersEv.added, user);
@@ -65,6 +68,8 @@ io.on("connect", (socket) => {
       return;
     }
 
+    console.log("USER TO DISCONNECT: ", user);
+
     await UsersDbService.removeUser(user.id);
     io.to(room.name).emit(usersEv.removed, user);
     socket.leave(room.name);
@@ -81,17 +86,19 @@ io.on("connect", (socket) => {
       `${socket.id}: Native pipeline dropped abruptly. Running ghost cleanup sweep...`,
     );
 
-    // TODO this logic need to be fixed (remove ghost users in json which is not exist in rooms any more)
-    /*try {
+    try {
       const databaseUsers = await UsersDbService.getAllUsers();
+
       if (!databaseUsers || databaseUsers.length === 0) return;
 
       const activeSockets = await io.fetchSockets();
       const activeUserIds = new Set<number>();
 
-      activeSockets.forEach((s: any) => {
-        if (s.userData?.id && !s.isGracefulLogout) {
-          activeUserIds.add(s.userData.id);
+      activeSockets.forEach((socket) => {
+        const tmpUser: UserModel = socket.data?.user;
+
+        if (tmpUser) {
+          activeUserIds.add(tmpUser.id);
         }
       });
 
@@ -103,10 +110,10 @@ io.on("connect", (socket) => {
 
           try {
             await UsersDbService.removeUser(dbUser.id);
-
             const room = (await RoomsDbService.getRoomById(
               dbUser.roomId,
             )) as RoomModel;
+
             if (room) {
               io.to(room.name).emit(usersEv.removed, dbUser);
             }
@@ -119,7 +126,7 @@ io.on("connect", (socket) => {
       }
     } catch (error) {
       console.error("Failed running ghost_buster routine safely:", error);
-    }*/
+    }
   });
 });
 
