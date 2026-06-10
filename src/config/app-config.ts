@@ -14,7 +14,7 @@ export const APP_CONFIG = {
   },
 } as const;
 
-export const SERVER_CONF = {
+export const SERVER_CONFIG = {
   expressCors: {
     origin: APP_CONFIG.serverConf.origin,
   },

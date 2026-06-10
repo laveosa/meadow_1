@@ -13,11 +13,11 @@ export default class RoomsDbService {
     return [...this.cachedData];
   }
 
-  static async getRoomById(id: number) {
+  static async getRoomById(id) {
     if (!id) return null;
 
     await this.initCache();
-    return this.cachedData?.find((item) => item.id === id);
+    return this.cachedData?.find((item) => item.id === parseInt(id));
   }
 
   static async addRoom(room: RoomModel) {
@@ -26,7 +26,7 @@ export default class RoomsDbService {
     await this.initCache();
     this.cachedData = this.cachedData.filter((item) => item.id !== room.id);
     this.cachedData.push(room);
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return room;
   }
 
@@ -46,7 +46,7 @@ export default class RoomsDbService {
 
     if (!updated) return null;
 
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return updated;
   }
 
@@ -59,7 +59,7 @@ export default class RoomsDbService {
     if (!removed) return null;
 
     this.cachedData = this.cachedData.filter((item) => item.id !== id);
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return removed;
   }
 

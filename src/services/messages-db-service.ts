@@ -26,7 +26,7 @@ export default class MessagesDbService {
     await this.initCache();
     this.cachedData = this.cachedData.filter((item) => item.id !== message.id);
     this.cachedData.push(message);
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return message;
   }
 
@@ -46,7 +46,7 @@ export default class MessagesDbService {
 
     if (!updated) return null;
 
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return updated;
   }
 
@@ -59,7 +59,7 @@ export default class MessagesDbService {
     if (!removed) return null;
 
     this.cachedData = this.cachedData.filter((item) => item.id !== id);
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return removed;
   }
 

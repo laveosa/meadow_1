@@ -29,7 +29,7 @@ export default class UsersDbService {
     await this.initCache();
     this.cachedData = this.cachedData.filter((item) => item.id !== user.id);
     this.cachedData.push(user);
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return user;
   }
 
@@ -49,7 +49,7 @@ export default class UsersDbService {
 
     if (!updated) return null;
 
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
     return updated;
   }
 
@@ -62,7 +62,8 @@ export default class UsersDbService {
     if (!removed) return null;
 
     this.cachedData = this.cachedData.filter((item) => item.id !== id);
-    await FsService.writeFile(PATH, this.cachedData);
+    await FsService.writeFile(PATH, JSON.stringify(this.cachedData, null, 2));
+
     return removed;
   }
 
