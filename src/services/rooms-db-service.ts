@@ -13,7 +13,7 @@ export default class RoomsDbService {
     return [...this.cachedData];
   }
 
-  static async getRoomById(id) {
+  static async getRoomById(id: any) {
     if (!id) return null;
 
     await this.initCache();

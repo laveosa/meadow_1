@@ -10,19 +10,21 @@ import {
 } from "#src/config/app-config.js";
 import masterRouter from "#src/routes/master-router.js";
 import UsersDbService from "#src/services/users-db-service.js";
-import type { RoomModel } from "#src/const/models/RoomModel.js";
 import RoomsDbService from "#src/services/rooms-db-service.js";
-import type { UserModel } from "#src/const/models/UserModel.js";
 import { SocketEventType } from "#src/const/enums/socket-event-type.js";
+import type { RoomModel } from "#src/const/models/RoomModel.js";
+import type { UserModel } from "#src/const/models/UserModel.js";
 
 const app = express();
 app.use(cors(SERVER_CONFIG.expressCors));
 app.use(globalErrorHandler);
 app.use("/api", masterRouter as Router);
+
 const server = createServer(app);
 const io = new Server(server, SERVER_CONFIG.socketIo);
 
-const { usersEv, msgEv } = SocketEventType;
+const { usersEv, roomsEv, msgEv } = SocketEventType;
+const REFRESH_GRACE_PERIOD_MS = 2000;
 
 io.on("connect", (socket) => {
   console.log(`${socket.id}: user is connected`);
@@ -56,19 +58,21 @@ io.on("connect", (socket) => {
   });
 
   socket.on(usersEv.disconnected, async (user: UserModel) => {
-    if (!user || !user.id) {
-      socket.emit(usersEv.error, `ERROR: user validation: ${user}`);
-      return;
-    }
+    if (!user || !user.id)
+      return socket.emit(usersEv.error, `ERROR: user validation: ${user}`);
 
     const room = (await RoomsDbService.getRoomById(user.roomId)) as RoomModel;
 
-    if (!room) {
-      socket.emit(usersEv.error, `ERROR: invalid room ID: ${user.roomId}`);
-      return;
-    }
+    if (!room)
+      return socket.emit(
+        usersEv.error,
+        `ERROR: invalid room ID: ${user.roomId}`,
+      );
 
-    console.log("USER TO DISCONNECT: ", user);
+    socket.data = {
+      ...socket.data,
+      isGracefulLogout: true,
+    };
 
     await UsersDbService.removeUser(user.id);
     io.to(room.name).emit(usersEv.removed, user);
@@ -79,54 +83,104 @@ io.on("connect", (socket) => {
     console.log("chat message: ", data);
   });
 
+  socket.on(
+    roomsEv.change,
+    async ({ user, room }: { user: UserModel; room: RoomModel }) => {
+      if (!user || !user.id)
+        return socket.emit(usersEv.error, `ERROR: user validation: ${user}`);
+      if (!room || !room.id)
+        return socket.emit(usersEv.error, `ERROR: room validation: ${room}`);
+
+      try {
+        const freshUser = (await UsersDbService.getUserById(
+          user.id,
+        )) as UserModel;
+        const oldRoom = (await RoomsDbService.getRoomById(
+          user.roomId,
+        )) as RoomModel;
+        const selectedRoom = (await RoomsDbService.getRoomById(
+          room.id,
+        )) as RoomModel;
+
+        if (!freshUser || !oldRoom || !selectedRoom)
+          return socket.emit(
+            usersEv.error,
+            `ERROR: invalid data: ${user} ${room}`,
+          );
+
+        socket.leave(oldRoom.name);
+        socket.broadcast.to(oldRoom.name).emit(usersEv.removed, freshUser);
+
+        freshUser.roomId = selectedRoom.id;
+        await UsersDbService.updateUser(freshUser);
+        socket.data.user = freshUser;
+        socket.data.room = selectedRoom;
+
+        socket.join(selectedRoom.name);
+        socket.broadcast.to(selectedRoom.name).emit(usersEv.updated, freshUser);
+
+        console.log(
+          `[ROOM SWITCH] ${freshUser.name} migrated to room: ${selectedRoom.name}`,
+        );
+      } catch (error) {
+        console.error("CRITICAL: Error during room switch execution:", error);
+        socket.emit(
+          usersEv.error,
+          "Internal server error during room migration.",
+        );
+      }
+    },
+  );
+
   // ==================================================================== ACTION
 
   socket.on("disconnect", async () => {
+    if (socket.data.isGracefulLogout) {
+      console.log(`${socket.id}: Clean explicit logout. Skipping ghost sweep.`);
+      return;
+    }
+
+    const userWhoLeft: UserModel | undefined = socket.data?.user;
+    if (!userWhoLeft) return;
+
     console.log(
       `${socket.id}: Native pipeline dropped abruptly. Running ghost cleanup sweep...`,
     );
 
-    try {
-      const databaseUsers = await UsersDbService.getAllUsers();
+    setTimeout(async () => {
+      try {
+        const activeSockets = await io.fetchSockets();
+        let isUserStillConnected = false;
 
-      if (!databaseUsers || databaseUsers.length === 0) return;
-
-      const activeSockets = await io.fetchSockets();
-      const activeUserIds = new Set<number>();
-
-      activeSockets.forEach((socket) => {
-        const tmpUser: UserModel = socket.data?.user;
-
-        if (tmpUser) {
-          activeUserIds.add(tmpUser.id);
-        }
-      });
-
-      for (const dbUser of databaseUsers) {
-        if (!activeUserIds.has(dbUser.id)) {
-          console.log(
-            `[GHOST BUSTER] Removing orphan user record: ${dbUser.name} (ID: ${dbUser.id})`,
-          );
-
-          try {
-            await UsersDbService.removeUser(dbUser.id);
-            const room = (await RoomsDbService.getRoomById(
-              dbUser.roomId,
-            )) as RoomModel;
-
-            if (room) {
-              io.to(room.name).emit(usersEv.removed, dbUser);
-            }
-          } catch (fileError) {
-            console.warn(
-              `[GHOST BUSTER] File write conflict bypassed for user ${dbUser.name}. Will clean up on next cycle.`,
-            );
+        for (const s of activeSockets) {
+          if (s.data?.user?.id === userWhoLeft.id) {
+            isUserStillConnected = true;
+            break;
           }
         }
+
+        if (isUserStillConnected) {
+          console.log(
+            `[GHOST BUSTER] Smooth recovery! ${userWhoLeft.name} reconnected successfully. Record preserved.`,
+          );
+        } else {
+          console.log(
+            `[GHOST BUSTER] Grace period expired for ${userWhoLeft.name}. Purging orphan record.`,
+          );
+
+          await UsersDbService.removeUser(userWhoLeft.id);
+          const room = (await RoomsDbService.getRoomById(
+            userWhoLeft.roomId,
+          )) as RoomModel;
+
+          if (room) {
+            io.to(room.name).emit(usersEv.removed, userWhoLeft);
+          }
+        }
+      } catch (error) {
+        console.error("Failed running precise ghost buster routine:", error);
       }
-    } catch (error) {
-      console.error("Failed running ghost_buster routine safely:", error);
-    }
+    }, REFRESH_GRACE_PERIOD_MS);
   });
 });
 

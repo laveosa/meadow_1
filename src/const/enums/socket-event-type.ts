@@ -8,7 +8,11 @@ export const SocketEventType = {
     error: "[USERS]:error",
     typing: "[USERS]:typing",
   },
-  roomsEv: {},
+  roomsEv: {
+    change: "[ROOM]:change",
+    leave: "[ROOM]:leave",
+    join: "[ROOM]:join",
+  },
   msgEv: {
     newMsg: "[MSG]:new_message",
   },
