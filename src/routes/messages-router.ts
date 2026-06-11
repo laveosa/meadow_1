@@ -9,7 +9,18 @@ const onError = getRoutErrorMessageFunc("Messages Router");
 
 messagesRouter.get("/all", async (req, res, next) => {
   try {
-    const messages: MessageModel[] = await MessagesDbService.getAllMessages();
+    const { roomId, userId } = req.query;
+    let messages: MessageModel[];
+
+    if (roomId) {
+      const parsedRoomId = parseInt(roomId as string, 10);
+      messages = await MessagesDbService.getAllMessagesInRoom(parsedRoomId);
+    } else if (userId) {
+      const parsedUserId = parseInt(userId as string, 10);
+      messages = await MessagesDbService.getAllMessagesForUser(parsedUserId);
+    } else {
+      messages = await MessagesDbService.getAllMessages();
+    }
 
     if (!messages)
       return res.status(404).json(onError("Error to get all messages"));

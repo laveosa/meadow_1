@@ -13,6 +13,20 @@ export default class MessagesDbService {
     return [...this.cachedData];
   }
 
+  static async getAllMessagesInRoom(roomId: number) {
+    if (!roomId) return null;
+
+    await this.initCache();
+    return this.cachedData?.filter((item) => item.roomId == roomId);
+  }
+
+  static async getAllMessagesForUser(userId: number) {
+    if (!userId) return null;
+
+    await this.initCache();
+    return this.cachedData?.filter((item) => item.authorId == userId);
+  }
+
   static async getMessageById(id: number) {
     if (!id) return null;
 

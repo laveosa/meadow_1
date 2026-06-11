@@ -15,5 +15,6 @@ export const SocketEventType = {
   },
   msgEv: {
     newMsg: "[MSG]:new_message",
+    updated: "[MSG]:updated",
   },
 };

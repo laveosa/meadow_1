@@ -14,6 +14,8 @@ import RoomsDbService from "#src/services/rooms-db-service.js";
 import { SocketEventType } from "#src/const/enums/socket-event-type.js";
 import type { RoomModel } from "#src/const/models/RoomModel.js";
 import type { UserModel } from "#src/const/models/UserModel.js";
+import type { MessageModel } from "#src/const/models/MessageModel.js";
+import MessagesDbService from "#src/services/messages-db-service.js";
 
 const app = express();
 app.use(cors(SERVER_CONFIG.expressCors));
@@ -29,7 +31,7 @@ const REFRESH_GRACE_PERIOD_MS = 2000;
 io.on("connect", (socket) => {
   console.log(`${socket.id}: user is connected`);
 
-  // ==================================================================== ACTION
+  //================================================================================= USERS
 
   socket.on(usersEv.add, async (user: UserModel) => {
     if (!user || !user.id) {
@@ -79,9 +81,54 @@ io.on("connect", (socket) => {
     socket.leave(room.name);
   });
 
-  socket.on(msgEv.newMsg, (data) => {
-    console.log("chat message: ", data);
+  socket.on(usersEv.typing, async (user: UserModel) => {
+    if (!user || !user.id)
+      return socket.emit(usersEv.error, `ERROR: user validation: ${user}`);
+
+    try {
+      const room = (await RoomsDbService.getRoomById(user.roomId)) as RoomModel;
+
+      if (!room)
+        return socket.emit(
+          usersEv.error,
+          `ERROR: invalid room ID: ${user.roomId}`,
+        );
+
+      socket.broadcast.to(room.name).emit(usersEv.typing, user);
+    } catch (error) {
+      socket.emit(
+        usersEv.error,
+        "Internal server error during room migration.",
+      );
+    }
   });
+
+  //================================================================================= MESSAGES
+
+  socket.on(msgEv.newMsg, async (message: MessageModel) => {
+    if (!message || !message.id || message.message.length === 0)
+      return socket.emit(
+        usersEv.error,
+        `ERROR: message validation: ${message}`,
+      );
+
+    try {
+      await MessagesDbService.addMessage(message);
+
+      const roomMsg = (await MessagesDbService.getAllMessagesInRoom(
+        message.roomId,
+      )) as MessageModel[];
+
+      io.to(message.rooName).emit(msgEv.updated, roomMsg);
+    } catch (error) {
+      socket.emit(
+        usersEv.error,
+        "Internal server error during room migration.",
+      );
+    }
+  });
+
+  //================================================================================= ROOMS
 
   socket.on(
     roomsEv.change,
@@ -118,6 +165,7 @@ io.on("connect", (socket) => {
 
         socket.join(selectedRoom.name);
         socket.broadcast.to(selectedRoom.name).emit(usersEv.updated, freshUser);
+        socket.emit(usersEv.added, freshUser);
 
         console.log(
           `[ROOM SWITCH] ${freshUser.name} migrated to room: ${selectedRoom.name}`,
@@ -132,7 +180,7 @@ io.on("connect", (socket) => {
     },
   );
 
-  // ==================================================================== ACTION
+  // ==================================================================== DISCONNECT
 
   socket.on("disconnect", async () => {
     if (socket.data.isGracefulLogout) {
